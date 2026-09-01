@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/investigation.schema.json",
+  "title": "Grounded incident investigation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "timeline", "hypotheses", "next_queries"],
+  "properties": {
+    "summary": { "type": "string" },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "event", "evidence_ids"],
+        "properties": {
+          "at": { "type": "string" },
+          "event": { "type": "string" },
+          "evidence_ids": { "type": "array", "items": { "type": "string", "pattern": "^[ET][A-Z0-9-]+$" } }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cause", "confidence", "supporting_evidence", "contradictions"],
+        "properties": {
+          "cause": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "supporting_evidence": { "type": "array", "items": { "type": "string" } },
+          "contradictions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "next_queries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tool", "arguments", "reason"],
+        "properties": {
+          "tool": { "enum": ["search_logs", "get_metrics", "get_recent_deployments", "get_service_dependencies"] },
+          "arguments": { "type": "object" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}
