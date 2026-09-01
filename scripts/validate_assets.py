@@ -17,14 +17,15 @@ def main() -> None:
         *Path("infra/k8s").glob("*.yaml"),
         Path("docker-compose.yml"),
         Path("infra/prometheus.yml"),
+        Path("render.yaml"),
     ]
     for path in json_files:
         json.loads(path.read_text(encoding="utf-8"))
     for path in yaml_files:
         list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
     schema = create_app().openapi()
-    if schema["info"]["version"] != "2.0.1":
-        raise RuntimeError("OpenAPI release version does not match v2")
+    if schema["info"]["version"] != "2.1.0":
+        raise RuntimeError("OpenAPI release version does not match v2.1")
     print(
         f"Validated {len(json_files)} JSON files, {len(yaml_files)} YAML files, "
         f"and {len(schema['paths'])} OpenAPI paths."

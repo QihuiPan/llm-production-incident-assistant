@@ -6,6 +6,20 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-01
+
+### Added
+
+- Render Blueprint delivery for a private API, background worker, public web proxy, managed PostgreSQL 17 with pgvector, and persistent Redis-compatible queue.
+- An idempotent PostgreSQL migration command for managed pre-deploy workflows.
+- Deployment contract tests covering private networking, generated datastore credentials, secret prompting, and public web routing.
+
+### Changed
+
+- Route browser API traffic through the same-origin Nginx web service so the application API can remain on Render's private network.
+- Make API and web containers honor platform-provided ports while preserving local Docker Compose defaults.
+- Expand the deployment guide with the Render provisioning, secret, DNS, smoke-test, and rollback workflow.
+
 ## [2.0.1] - 2026-09-01
 
 ### Fixed
@@ -44,7 +58,8 @@ All notable changes to this project are documented in this file. The format foll
 - English architecture, API, threat-model, error-analysis, and blueprint-coverage documentation.
 - CI enforcement requiring a changelog update for every behavior-changing pull request.
 
-[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/releases/tag/v1.0.0

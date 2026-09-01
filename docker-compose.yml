@@ -42,10 +42,9 @@ services:
       - no-new-privileges:true
 
   web:
-    build:
-      context: ./web
-      args:
-        VITE_API_URL: http://localhost:8000
+    build: ./web
+    environment:
+      API_UPSTREAM_HOSTPORT: api:8000
     ports:
       - "5173:8080"
     depends_on:
