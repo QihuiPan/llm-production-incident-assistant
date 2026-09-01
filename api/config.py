@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    web_dist_dir: str | None = None
     max_document_bytes: int = Field(default=5 * 1024 * 1024, ge=1024)
     max_tool_calls_per_run: int = Field(default=3, ge=1, le=10)
     max_query_window_hours: int = Field(default=24, ge=1, le=168)

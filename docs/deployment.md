@@ -2,10 +2,11 @@
 
 ## Verified delivery targets
 
-The repository produces two non-root, read-only images:
+The repository produces three non-root, read-only images:
 
 - `llm-production-incident-assistant`: FastAPI and RQ worker runtime.
 - `llm-production-incident-assistant-web`: static React workspace on unprivileged Nginx.
+- `llm-production-incident-assistant-render-free`: combined React and FastAPI public-demo runtime.
 
 `docker-compose.yml` is the reproducible local integration target. `render.yaml` is the managed public-demo target, and `infra/k8s` is the production-oriented Kubernetes base. Tag pushes run `.github/workflows/release.yml`, which publishes multi-architecture GHCR images with provenance and SBOM metadata.
 
@@ -21,29 +22,28 @@ The stack exposes the workspace on port 5173, API on 8000, PostgreSQL on 5432, a
 
 The committed Blueprint creates the following topology in the `singapore` region:
 
-- A public Nginx web service that serves the React workspace and proxies only `/api/*`.
-- A private FastAPI service reached through Render private DNS.
-- A private RQ worker.
-- PostgreSQL 17 with pgvector and no public IP allowlist.
-- A persistent Redis-compatible Key Value queue with no public IP allowlist.
+- One free web service that serves the bundled React workspace and authenticated FastAPI routes from the same origin.
+- One free PostgreSQL 17 database with pgvector and no public IP allowlist.
 
-Before the first sync, review the region and compute plans in `render.yaml`. Render regions are immutable after creation, and the API, worker, database, and persistent queue use paid plans. The public web proxy uses the free plan by default.
+Every resource in `render.yaml` explicitly selects the `free` plan. Render does not provide free Private Service or Background Worker instances, so this public-demo profile uses an inline thread pool for inspectable ingestion and evaluation jobs. The production Compose and Kubernetes targets retain the separate API, queue, and worker boundaries.
 
 1. Sign in to Render and install the Render GitHub App for only this private repository.
 2. Create a Blueprint from the repository and select `render.yaml`.
 3. Confirm that the proposed resource names and `singapore` region are acceptable.
 4. Provide `API_KEYS_JSON` when Render prompts for the `sync: false` secret. A suitable administrator record is `{"generated-secret":{"subject":"owner@example.com","roles":["administrator"]}}`; replace both placeholders and store the generated key outside the repository.
-5. Approve the paid resources. The API pre-deploy command runs `python -m api.migrate`, which enables pgvector and applies the idempotent schema.
-6. Wait for the database, queue, API, worker, and web service to become healthy.
+5. Verify that the estimated monthly price is zero before deploying. The container startup command runs `python -m api.migrate`, which enables pgvector and applies the idempotent schema.
+6. Wait for the database and combined web service to become healthy.
 7. Open the web service URL, enter the generated application key, create the documented checkout incident, run an investigation, approve one simulator proposal, and inspect the dashboard and postmortem export.
 
-The browser sends API calls to the same public origin. Nginx forwards those requests to the private API through `API_UPSTREAM_HOSTPORT`; neither the API nor either datastore needs a public endpoint. Render injects database and queue connection strings through Blueprint references, so their credentials are never committed.
+The browser sends API calls to the same public origin. API-key authentication remains enabled, and the database accepts no public IP ranges. Render injects the database connection string through a Blueprint reference, so its credentials are never committed.
 
-To add a custom domain, attach the web hostname in Render and create the requested DNS record with the domain provider. Render provisions and renews TLS. No API subdomain is required for this private topology.
+The free profile is a portfolio demonstration, not a production topology. Render free web services spin down after 15 minutes without inbound traffic and can take about one minute to wake. A workspace receives 750 free instance hours per month. The service filesystem is ephemeral, and free PostgreSQL is limited to 1 GB, has no backups, and expires 30 days after creation. Recreate the free database or upgrade it before expiry if the demo must remain available.
 
-For a real OpenAI deployment, add `LLM_PROVIDER=openai_compatible`, `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL`, explicit input/output price variables, and the approved daily budget to the private API service. For production telemetry, also add the four fixed telemetry URLs and optional bearer token, then change `TOOL_BACKEND` only for a private canary. Do not add model or telemetry secrets to the public web service.
+To add a custom domain, attach the web hostname in Render and create the requested DNS record with the domain provider. Render provisions and renews TLS. No API subdomain is required.
 
-Rollback by selecting the previous successful deploy for the API, worker, and web services. The migration is additive and idempotent; do not delete schema objects during an application rollback. Database and queue rollback follows the managed recovery policy selected in Render.
+For a real OpenAI deployment, add `LLM_PROVIDER=openai_compatible`, `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL`, explicit input/output price variables, and the approved daily budget as server-side Render environment secrets. For production telemetry, move to the production topology, add the four fixed telemetry URLs and optional bearer token, then change `TOOL_BACKEND` only for a private canary. Never expose model or telemetry secrets in the web build.
+
+Rollback by selecting one of the two previous successful web-service deploys available to free instances. The migration is additive and idempotent; do not delete schema objects during an application rollback. Free PostgreSQL has no managed backups.
 
 ## Kubernetes prerequisites
 
@@ -85,4 +85,4 @@ Rollback by restoring the prior pinned API and web image tags. The v2 schema cha
 
 ## Public demo boundary
 
-Repository delivery does not authorize publishing data or changing GitHub visibility. A public deployment requires the owner's explicit approval of the Render account, region, paid plans, optional domain, and application credentials. Use simulator tools and synthetic data for any public demo.
+Repository delivery does not authorize publishing data or changing GitHub visibility. A public deployment requires the owner's explicit approval of the Render account, region, optional domain, and application credentials. Verify a zero-dollar estimate when using the free-demo Blueprint. Use simulator tools and synthetic data for any public demo.

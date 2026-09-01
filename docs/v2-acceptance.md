@@ -17,6 +17,6 @@ This checklist turns every MVP and advanced requirement in the source blueprint 
 | Background work | Ingestion and evaluation can run through a durable queue with inspectable job status. |
 | User experience | The React workspace supports investigation, evidence review, tool approval, feedback, postmortem export, and operational dashboards. |
 | Testing | Unit, contract, security, API, PostgreSQL Testcontainers, evaluation, and Playwright end-to-end suites are automated. |
-| Delivery | Reproducible containers, a private-network Render Blueprint, Kubernetes resources, CI, release automation, English documentation, and mandatory changelog enforcement are present. |
+| Delivery | Reproducible containers, a free-tier Render demo Blueprint, production-oriented Kubernetes resources, CI, release automation, English documentation, and mandatory changelog enforcement are present. |
 
 Public cloud deployment is an external operation. The repository is complete when its image and deployment artifacts pass verification; publishing a live demo additionally requires an approved hosting account, domain, credentials, and repository visibility policy.

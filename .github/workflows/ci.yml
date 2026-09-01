@@ -86,3 +86,4 @@ jobs:
       - run: docker compose config --quiet
       - run: docker build --tag incident-assistant-api:test .
       - run: docker build --tag incident-assistant-web:test ./web
+      - run: docker build --file Dockerfile.render-free --tag incident-assistant-render-free:test .

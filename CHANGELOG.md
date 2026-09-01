@@ -6,6 +6,19 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-09-01
+
+### Added
+
+- A combined React and FastAPI image for a single-service Render free-tier deployment.
+- Deployment contract coverage that rejects paid Render plans and verifies the bundled workspace route.
+
+### Changed
+
+- Replace the paid private API, worker, persistent queue, and database Blueprint with one free web service and one free PostgreSQL database.
+- Run public-demo background jobs inline because Render does not offer free background-worker instances.
+- Document free-tier sleep, monthly usage, ephemeral runtime, and 30-day database-expiration constraints.
+
 ## [2.1.0] - 2026-09-01
 
 ### Added
@@ -58,7 +71,8 @@ All notable changes to this project are documented in this file. The format foll
 - English architecture, API, threat-model, error-analysis, and blueprint-coverage documentation.
 - CI enforcement requiring a changelog update for every behavior-changing pull request.
 
-[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v1.0.0...v2.0.0

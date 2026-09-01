@@ -24,8 +24,8 @@ def main() -> None:
     for path in yaml_files:
         list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
     schema = create_app().openapi()
-    if schema["info"]["version"] != "2.1.0":
-        raise RuntimeError("OpenAPI release version does not match v2.1")
+    if schema["info"]["version"] != "2.1.1":
+        raise RuntimeError("OpenAPI release version does not match v2.1.1")
     print(
         f"Validated {len(json_files)} JSON files, {len(yaml_files)} YAML files, "
         f"and {len(schema['paths'])} OpenAPI paths."

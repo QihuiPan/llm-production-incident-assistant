@@ -12,6 +12,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.auth import APIKeyAuthenticator, Principal
 from api.config import Settings, get_settings
@@ -60,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(
         title="LLM Production Incident Assistant",
-        version="2.1.0",
+        version="2.1.1",
         description=(
             "A cited, evaluated, read-only assistant for production incident investigation."
         ),
@@ -419,6 +420,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/evaluations", response_model=list[EvaluationReport])
     def list_evaluations(_: Principal = Depends(evaluator)) -> list[EvaluationReport]:
         return store.list_evaluations()
+
+    if settings.web_dist_dir:
+        web_dist = Path(settings.web_dist_dir)
+        if not web_dist.is_dir():
+            raise ValueError(f"WEB_DIST_DIR does not exist: {web_dist}")
+        app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
 
     return app
 

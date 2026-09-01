@@ -15,7 +15,7 @@ A cited, evaluated, read-only assistant for production incident investigation. T
 - A 100-case labelled dataset with development/held-out splits and vector-versus-advanced A/B gates.
 - API-key RBAC, Redis Queue jobs, persistent model cache/cost budgets, and p50/p95 traces.
 - Testcontainers, Playwright desktop/mobile E2E, Compose, Kubernetes, and release-image automation.
-- A Render Blueprint that keeps the API, PostgreSQL, and Redis-compatible queue on private networking behind a same-origin web proxy.
+- A zero-monthly-cost Render Blueprint that serves the React workspace and authenticated API from one free web service backed by free PostgreSQL.
 - A responsive React workspace with evidence, timeline, approvals, dashboard, feedback, and export.
 
 ## Quick start
@@ -51,9 +51,9 @@ This starts the web workspace, API, PostgreSQL with pgvector, Redis, an RQ worke
 
 ### Render deployment
 
-`render.yaml` provisions the public web proxy, private API, private worker, PostgreSQL 17, and persistent Redis-compatible queue in Singapore. Connect the private repository to Render, create a Blueprint from the repository, and provide `API_KEYS_JSON` only when prompted. The committed pre-deploy command applies the idempotent pgvector schema before the API starts.
+`render.yaml` provisions one combined free web service and one free PostgreSQL 17 database in Singapore. Connect the private repository to Render, create a Blueprint from the repository, and provide `API_KEYS_JSON` only when prompted. The container applies the idempotent pgvector schema before serving the bundled React workspace and FastAPI routes from one origin.
 
-Review the selected region and paid plans before the first Blueprint sync because the region is immutable after resource creation. No OpenAI or production-telemetry secret is required for the safe simulator demo. See [deployment.md](docs/deployment.md) for the complete provisioning and smoke-test workflow.
+The Blueprint selects only Render resources with the `free` plan. The demo uses inline jobs because free background workers are unavailable. Free web services sleep after inactivity, and free Render PostgreSQL expires after 30 days. No OpenAI or production-telemetry secret is required for the safe simulator demo. See [deployment.md](docs/deployment.md) for the exact limitations and smoke-test workflow.
 
 ## Production configuration
 
@@ -109,7 +109,7 @@ evals/        labelled dataset, rubric, runner, and reports
 workers/      ingestion and batch-evaluation job boundaries
 web/          React incident workspace and evidence viewer
 infra/        PostgreSQL/pgvector and Prometheus configuration
-render.yaml   Private-network Render Blueprint for the hosted demo
+render.yaml   Zero-monthly-cost Render Blueprint for the hosted demo
 docs/         architecture, API, threat model, coverage, and error analysis
 tests/        unit, API, contract, security, and evaluation tests
 ```

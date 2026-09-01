@@ -3,21 +3,23 @@
 version: "1"
 
 services:
-  - type: pserv
-    name: llm-incident-assistant-api
+  - type: web
+    name: llm-incident-assistant
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: singapore
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render-free
     dockerContext: .
-    preDeployCommand: python -m api.migrate
+    dockerCommand: sh -c 'python -m api.migrate && exec uvicorn api.main:app --host 0.0.0.0 --port "${PORT:-10000}"'
+    healthCheckPath: /healthz
     autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: APP_ENV
         value: production
       - key: LOG_LEVEL
         value: INFO
+      - key: WEB_DIST_DIR
+        value: /app/web-dist
       - key: STORAGE_BACKEND
         value: postgres
       - key: RETRIEVAL_MODE
@@ -25,7 +27,7 @@ services:
       - key: TOOL_BACKEND
         value: simulator
       - key: JOB_BACKEND
-        value: rq
+        value: inline
       - key: AUTH_ENABLED
         value: "true"
       - key: API_KEYS_JSON
@@ -40,70 +42,12 @@ services:
         fromDatabase:
           name: llm-incident-assistant-db
           property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: llm-incident-assistant-queue
-          type: keyvalue
-          property: connectionString
-
-  - type: worker
-    name: llm-incident-assistant-worker
-    runtime: docker
-    plan: 0.5c-512mb
-    region: singapore
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: sh -c 'exec rq worker --url "$REDIS_URL" incident-assistant'
-    autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 60
-    envVars:
-      - key: APP_ENV
-        value: production
-      - key: LOG_LEVEL
-        value: INFO
-      - key: STORAGE_BACKEND
-        value: postgres
-      - key: DATABASE_URL
-        fromDatabase:
-          name: llm-incident-assistant-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: llm-incident-assistant-queue
-          type: keyvalue
-          property: connectionString
-
-  - type: web
-    name: llm-incident-assistant-web
-    runtime: docker
-    plan: free
-    region: singapore
-    dockerfilePath: ./web/Dockerfile
-    dockerContext: ./web
-    healthCheckPath: /healthz
-    autoDeployTrigger: checksPass
-    envVars:
-      - key: API_UPSTREAM_HOSTPORT
-        fromService:
-          name: llm-incident-assistant-api
-          type: pserv
-          property: hostport
-
-  - type: keyvalue
-    name: llm-incident-assistant-queue
-    plan: starter
-    region: singapore
-    ipAllowList: []
-    maxmemoryPolicy: allkeys-lru
-    persistenceMode: journal-snapshot
 
 databases:
   - name: llm-incident-assistant-db
-    plan: 0.5c-1g
+    plan: free
     region: singapore
     postgresMajorVersion: "17"
     databaseName: incident_assistant
     user: incident_assistant
-    diskSizeGB: 10
-    connectionPool: none
     ipAllowList: []
