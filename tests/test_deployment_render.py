@@ -35,6 +35,7 @@ def test_render_blueprint_uses_only_free_resources() -> None:
     assert web["type"] == "web"
     assert web["plan"] == "free"
     assert web["dockerfilePath"] == "./Dockerfile.render-free"
+    assert "dockerCommand" not in web
     assert web_env["JOB_BACKEND"]["value"] == "inline"
     assert web_env["API_KEYS_JSON"] == {"key": "API_KEYS_JSON", "sync": False}
     assert web_env["DATABASE_URL"]["fromDatabase"]["property"] == "connectionString"

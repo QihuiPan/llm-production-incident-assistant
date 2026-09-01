@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llm-production-incident-assistant"
-version = "2.1.1"
+version = "2.1.2"
 description = "A cited, evaluated, read-only assistant for production incident investigation."
 readme = "README.md"
 requires-python = ">=3.11"

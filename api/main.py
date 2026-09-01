@@ -61,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(
         title="LLM Production Incident Assistant",
-        version="2.1.1",
+        version="2.1.2",
         description=(
             "A cited, evaluated, read-only assistant for production incident investigation."
         ),
