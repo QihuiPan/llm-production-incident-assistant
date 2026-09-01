@@ -9,7 +9,7 @@ from uuid import uuid4
 from pypdf import PdfReader
 
 from api.models import TrustLevel
-from api.security import scan_prompt_injection
+from api.security import redact_text, scan_prompt_injection
 from retrieval.chunking import chunk_document
 from retrieval.hybrid import HybridIndex
 from retrieval.models import DocumentRecord
@@ -54,6 +54,8 @@ def ingest_bytes(
     text = extract_text(filename, payload)
     if not text.strip():
         raise IngestionError("document contains no extractable text")
+    scan = scan_prompt_injection(text)
+    safe_text, _ = redact_text(text)
     document = DocumentRecord(
         id=f"DOC-{uuid4().hex[:12].upper()}",
         source=PurePath(filename).name,
@@ -61,9 +63,9 @@ def ingest_bytes(
         service=service,
         environment=environment,
         trust_level=trust_level,
-        content=text,
+        content=safe_text,
     )
     chunks = chunk_document(document)
     index.add(chunks)
-    flagged = scan_prompt_injection(text).flagged
+    flagged = scan.flagged
     return document, len(chunks), flagged

@@ -7,9 +7,11 @@ CREATE TABLE IF NOT EXISTS documents (
     service text NOT NULL,
     environment text,
     trust_level text NOT NULL CHECK (trust_level IN ('official', 'reviewed', 'unverified')),
-    created_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (source, version, service, environment)
+    created_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE documents
+    DROP CONSTRAINT IF EXISTS documents_source_version_service_environment_key;
 
 CREATE TABLE IF NOT EXISTS chunks (
     id text PRIMARY KEY,
@@ -50,6 +52,7 @@ CREATE TABLE IF NOT EXISTS tool_calls (
     id text PRIMARY KEY,
     incident_id text NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
     tool text NOT NULL,
+    reason text NOT NULL DEFAULT '',
     arguments jsonb NOT NULL,
     result_ref text,
     status text NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'EXECUTED', 'REJECTED', 'FAILED')),
@@ -57,6 +60,8 @@ CREATE TABLE IF NOT EXISTS tool_calls (
     created_at timestamptz NOT NULL DEFAULT now(),
     executed_at timestamptz
 );
+
+ALTER TABLE tool_calls ADD COLUMN IF NOT EXISTS reason text NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS evidence (
     id text NOT NULL,
@@ -87,4 +92,54 @@ CREATE TABLE IF NOT EXISTS feedback (
     label text NOT NULL,
     correction text,
     created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS background_jobs (
+    id text PRIMARY KEY,
+    queue text NOT NULL,
+    kind text NOT NULL,
+    status text NOT NULL CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED')),
+    payload jsonb NOT NULL,
+    result jsonb,
+    error text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    started_at timestamptz,
+    finished_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS traces (
+    id text PRIMARY KEY,
+    incident_id text REFERENCES incidents(id) ON DELETE SET NULL,
+    operation text NOT NULL,
+    status text NOT NULL,
+    started_at timestamptz NOT NULL,
+    duration_ms double precision NOT NULL CHECK (duration_ms >= 0),
+    attributes jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS traces_incident_started_idx ON traces (incident_id, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS llm_cache (
+    cache_key text PRIMARY KEY,
+    provider text NOT NULL,
+    model text NOT NULL,
+    response jsonb NOT NULL,
+    input_tokens integer NOT NULL DEFAULT 0,
+    output_tokens integer NOT NULL DEFAULT 0,
+    cost_usd numeric(12, 6) NOT NULL DEFAULT 0,
+    fallback_used boolean NOT NULL DEFAULT false,
+    expires_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE llm_cache ADD COLUMN IF NOT EXISTS fallback_used boolean NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS llm_cache_expiry_idx ON llm_cache (expires_at);
+
+CREATE TABLE IF NOT EXISTS daily_costs (
+    usage_date date PRIMARY KEY,
+    cost_usd numeric(12, 6) NOT NULL DEFAULT 0,
+    input_tokens bigint NOT NULL DEFAULT 0,
+    output_tokens bigint NOT NULL DEFAULT 0,
+    updated_at timestamptz NOT NULL DEFAULT now()
 );

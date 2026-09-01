@@ -14,7 +14,9 @@ Every pull request that changes code, behavior, configuration, documentation, de
 python -m ruff check .
 python -m pytest
 python -m evals.runner --dataset evals/datasets/synthetic_incidents.jsonl --strict
+python -m evals.runner --dataset evals/datasets/synthetic_incidents.jsonl --compare --strict
 cd web && pnpm install --frozen-lockfile && pnpm test && pnpm build
+cd web && pnpm exec playwright install chromium && pnpm e2e
 ```
 
 Use Conventional Commits for commit subjects. Never add a write-capable production tool without a threat-model update and explicit human approval controls.

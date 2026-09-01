@@ -19,7 +19,7 @@ def tokenize(text: str) -> list[str]:
     return [token.lower() for token in TOKEN_RE.findall(text)]
 
 
-def hashed_embedding(text: str, dimensions: int = 128) -> list[float]:
+def hashed_embedding(text: str, dimensions: int = 768) -> list[float]:
     """Create a local deterministic embedding suitable for a zero-secret demo."""
 
     vector = [0.0] * dimensions

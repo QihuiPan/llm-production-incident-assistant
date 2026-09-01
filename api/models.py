@@ -72,16 +72,20 @@ class Evidence(BaseModel):
 
 
 class TimelineEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     at: str
     event: str
     evidence_ids: list[str]
 
 
 class Hypothesis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     cause: str
     confidence: float = Field(ge=0, le=1)
     supporting_evidence: list[str]
-    contradictions: list[str] = Field(default_factory=list)
+    contradictions: list[str]
 
 
 class ToolProposal(BaseModel):
@@ -99,6 +103,13 @@ class RunMetrics(BaseModel):
     estimated_tokens: int = Field(ge=0)
     estimated_cost_usd: float = Field(ge=0)
     config_version: str
+    llm_ms: float = Field(default=0, ge=0)
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    provider: str = "deterministic"
+    model: str = "local-baseline"
+    cache_hit: bool = False
+    fallback_used: bool = False
 
 
 class InvestigationOutput(BaseModel):
@@ -152,3 +163,46 @@ class EvaluationReport(BaseModel):
     p95_latency_ms: float
     passed: bool
     config_version: str
+    failure_counts: dict[str, int] = Field(default_factory=dict)
+    split_metrics: dict[str, dict[str, float]] = Field(default_factory=dict)
+
+
+class EvaluationComparison(BaseModel):
+    baseline: EvaluationReport
+    candidate: EvaluationReport
+    deltas: dict[str, float]
+    passed: bool
+
+
+class TraceRecord(BaseModel):
+    id: str
+    incident_id: str | None = None
+    operation: str
+    status: str
+    started_at: datetime = Field(default_factory=utc_now)
+    duration_ms: float = Field(ge=0)
+    attributes: dict[str, Any] = Field(default_factory=dict)
+
+
+class DashboardSummary(BaseModel):
+    trace_count: int = Field(ge=0)
+    operation_counts: dict[str, int]
+    p50_latency_ms: float = Field(ge=0)
+    p95_latency_ms: float = Field(ge=0)
+    llm_cost_usd: float = Field(ge=0)
+    token_count: int = Field(ge=0)
+    cache_hits: int = Field(ge=0)
+    failures: int = Field(ge=0)
+
+
+class BackgroundJob(BaseModel):
+    id: str
+    queue: str
+    kind: Literal["evaluation", "ingestion"]
+    status: Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]
+    payload: dict[str, Any]
+    result: dict[str, Any] | None = None
+    error: str | None = None
+    created_at: datetime = Field(default_factory=utc_now)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None

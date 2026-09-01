@@ -24,3 +24,16 @@ def test_redaction_leaves_safe_text_unchanged() -> None:
     clean, count = redact_text("connection pool exhausted")
     assert clean == "connection pool exhausted"
     assert count == 0
+
+
+def test_redaction_covers_provider_keys_cloud_keys_and_database_urls() -> None:
+    text = (
+        "sk-abcdefghijklmnopqrstuvwxyz "
+        "AKIAABCDEFGHIJKLMNOP "
+        "postgresql://incident:sensitive-password@database.internal/app"
+    )
+    clean, count = redact_text(text)
+    assert count == 3
+    assert "sensitive-password" not in clean
+    assert "AKIAABCDEFGHIJKLMNOP" not in clean
+    assert "sk-abcdefghijklmnopqrstuvwxyz" not in clean

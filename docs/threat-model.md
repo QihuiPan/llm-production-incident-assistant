@@ -9,7 +9,7 @@
 
 ## Trust boundaries
 
-Uploaded documents, retrieved chunks, alerts, and tool output are untrusted data. Browser requests cross an authentication boundary that a production deployment must enforce at the reverse proxy or API gateway. Tool adapters and the database are server-side components; the model and browser cannot call them directly.
+Uploaded documents, retrieved chunks, alerts, and tool output are untrusted data. Browser requests cross a bearer API-key and role boundary enforced in the application. Tool adapters and the database are server-side components; the model and browser cannot call them directly. External model and telemetry endpoints are administrator-configured egress destinations, never model-provided URLs.
 
 ## Primary threats and controls
 
@@ -24,10 +24,14 @@ Uploaded documents, retrieved chunks, alerts, and tool output are untrusted data
 | Cross-service data access | Tool service/environment must match the incident | `tests/test_tools.py` |
 | Malicious file | Type allowlist, size limit, UTF-8 requirement, passive PDF extraction | API and ingestion tests |
 | Dataset path traversal | Evaluation path constrained to `evals/datasets` | `tests/test_api.py` |
+| API-key role bypass | Constant-time key comparison and endpoint role dependencies | `tests/test_auth_runtime.py` |
+| SSRF through a tool argument | No URL argument exists; configured base URLs require absolute HTTP(S) without user information | `tests/test_production_adapters.py` |
+| External model schema drift | Strict JSON Schema, one repair, fallback chain, and pre-save citation validation | `tests/test_llm.py` |
+| Lost approval or trace audit | PostgreSQL approver, tool state, evidence, trace, and job records | `tests/test_postgres_integration.py` |
 
 ## Non-goals
 
-This repository does not provide identity federation, production network access, autonomous remediation, or a compliance certification. Simulator data is non-sensitive. Real adapters require organization-specific authorization and data-retention reviews.
+This repository does not provide identity federation, autonomous remediation, or a compliance certification. API keys are appropriate for the blueprint implementation but should be replaced or fronted by organization SSO where required. Simulator data is non-sensitive. Real adapters require organization-specific authorization and data-retention reviews.
 
 ## Safe extension checklist
 

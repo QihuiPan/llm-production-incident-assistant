@@ -4,7 +4,7 @@
   "title": "Grounded incident investigation",
   "type": "object",
   "additionalProperties": false,
-  "required": ["summary", "timeline", "hypotheses", "next_queries"],
+  "required": ["summary", "timeline", "hypotheses", "next_queries", "insufficient_evidence"],
   "properties": {
     "summary": { "type": "string" },
     "timeline": {
@@ -42,10 +42,59 @@
         "required": ["tool", "arguments", "reason"],
         "properties": {
           "tool": { "enum": ["search_logs", "get_metrics", "get_recent_deployments", "get_service_dependencies"] },
-          "arguments": { "type": "object" },
+          "arguments": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["service", "environment", "start", "end", "query", "limit"],
+                "properties": {
+                  "service": { "type": "string" },
+                  "environment": { "enum": ["production", "staging", "development"] },
+                  "start": { "type": "string", "format": "date-time" },
+                  "end": { "type": "string", "format": "date-time" },
+                  "query": { "type": "string" },
+                  "limit": { "type": "integer" }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["service", "environment", "start", "end", "metric", "step_seconds"],
+                "properties": {
+                  "service": { "type": "string" },
+                  "environment": { "enum": ["production", "staging", "development"] },
+                  "start": { "type": "string", "format": "date-time" },
+                  "end": { "type": "string", "format": "date-time" },
+                  "metric": { "enum": ["http_request_rate", "http_error_rate", "http_latency_p95", "cpu_utilization", "memory_utilization", "queue_depth"] },
+                  "step_seconds": { "type": "integer" }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["service", "environment", "start", "end"],
+                "properties": {
+                  "service": { "type": "string" },
+                  "environment": { "enum": ["production", "staging", "development"] },
+                  "start": { "type": "string", "format": "date-time" },
+                  "end": { "type": "string", "format": "date-time" }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["service"],
+                "properties": {
+                  "service": { "type": "string" }
+                }
+              }
+            ]
+          },
           "reason": { "type": "string" }
         }
       }
-    }
+    },
+    "insufficient_evidence": { "type": "boolean" }
   }
 }

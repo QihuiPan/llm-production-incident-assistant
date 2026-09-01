@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +23,29 @@ class Settings(BaseSettings):
     max_tool_rows: int = Field(default=200, ge=1, le=1000)
     daily_cost_budget_usd: float = Field(default=5.0, gt=0)
     database_url: str | None = None
+    storage_backend: Literal["memory", "postgres"] = "memory"
+    retrieval_mode: Literal["vector", "hybrid", "advanced"] = "advanced"
+    tool_backend: Literal["simulator", "production"] = "simulator"
+    auth_enabled: bool = False
+    api_keys_json: str = "{}"
+    llm_provider: Literal["deterministic", "openai_compatible"] = "deterministic"
+    llm_api_url: str | None = None
+    llm_api_key: SecretStr | None = None
+    llm_model: str | None = None
+    llm_fallback_model: str | None = None
+    llm_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
+    llm_max_output_tokens: int = Field(default=1200, ge=100, le=16_000)
+    llm_cache_ttl_seconds: int = Field(default=900, ge=0, le=86_400)
+    llm_input_cost_per_million: float = Field(default=0.0, ge=0)
+    llm_output_cost_per_million: float = Field(default=0.0, ge=0)
+    redis_url: str | None = "redis://localhost:6379/0"
+    job_backend: Literal["inline", "rq"] = "inline"
+    opensearch_url: str | None = None
+    opensearch_index: str = "logs-*"
+    prometheus_url: str | None = None
+    deployment_api_url: str | None = None
+    service_catalog_url: str | None = None
+    telemetry_bearer_token: SecretStr | None = None
 
     @property
     def origins(self) -> list[str]:

@@ -1,4 +1,4 @@
-# Baseline Error Analysis
+# Evaluation Error Analysis
 
 ## Known limitations
 
@@ -6,6 +6,7 @@
 2. The deterministic answer composer recognizes a small set of incident patterns. It exists to exercise grounding and safety without requiring a secret.
 3. Synthetic tool adapters approximate logs and metrics and are not calibrated to a real telemetry distribution.
 4. The committed benchmark shares document vocabulary with the demo corpus and must not be presented as production accuracy.
+5. The held-out split is fixed for reproducibility; it is not a substitute for organization-specific historical incidents.
 
 ## Failure attribution workflow
 
@@ -18,3 +19,5 @@ When a case fails, classify it before changing prompts or thresholds:
 - Safety: injection text changes behavior, a secret remains, or an unauthorized tool is proposed.
 
 Save the case ID, configuration version, ranked sources, output, metric deltas, and proposed remediation. Add a changelog entry for every behavior-changing correction.
+
+`failure_counts` provides the first attribution pass, and `split_metrics` separates development from held-out behavior. The A/B comparison reports candidate-minus-baseline deltas; latency deltas are descriptive while accuracy and recall deltas are enforced as non-regression gates.

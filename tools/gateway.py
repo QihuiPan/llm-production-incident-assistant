@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import time
 from collections import Counter
+from collections.abc import Callable, Mapping
 from datetime import timedelta
 from typing import Any
 from uuid import uuid4
@@ -11,8 +13,9 @@ from pydantic import ValidationError
 
 from api.models import Incident, ToolExecutionResult, ToolProposal
 from api.observability import metrics
+from api.repositories import Store
 from api.security import redact_value
-from api.store import MemoryStore
+from api.tracing import TraceRecorder
 from tools.adapters import ADAPTERS
 from tools.schemas import TOOL_SCHEMAS, TimeWindow
 
@@ -26,13 +29,17 @@ class ToolGateway:
 
     def __init__(
         self,
-        store: MemoryStore,
+        store: Store,
         *,
+        adapters: Mapping[str, Callable[[Any], list[dict[str, Any]]]] | None = None,
+        traces: TraceRecorder | None = None,
         max_calls_per_incident: int = 3,
         max_window_hours: int = 24,
         max_rows: int = 200,
     ) -> None:
         self.store = store
+        self.adapters = adapters or ADAPTERS
+        self.traces = traces
         self.max_calls_per_incident = max_calls_per_incident
         self.max_window = timedelta(hours=max_window_hours)
         self.max_rows = max_rows
@@ -43,7 +50,7 @@ class ToolGateway:
     ) -> ToolProposal:
         """Create a pending call only after strict schema and policy validation."""
 
-        if tool not in TOOL_SCHEMAS or tool not in ADAPTERS:
+        if tool not in TOOL_SCHEMAS or tool not in self.adapters:
             metrics.increment("tool_not_allowlisted_total")
             raise ToolPolicyError(f"tool is not allowlisted: {tool}")
         if self._proposed_counts[incident.id] >= self.max_calls_per_incident:
@@ -64,6 +71,8 @@ class ToolGateway:
                 raise ToolPolicyError("tool scope must match the incident service and environment")
         if tool == "search_logs" and validated.limit > self.max_rows:
             raise ToolPolicyError("log row limit exceeds the configured maximum")
+        if getattr(validated, "service", None) != incident.service:
+            raise ToolPolicyError("tool scope must match the incident service")
 
         proposal = ToolProposal(
             id=f"TC-{uuid4().hex[:12].upper()}",
@@ -86,13 +95,42 @@ class ToolGateway:
         validated = schema.model_validate(proposal.arguments)
         approved = proposal.model_copy(update={"status": "APPROVED"})
         self.store.update_tool_call(incident_id, approved)
-        with metrics.timer("tool_latency_ms"):
-            raw_result = ADAPTERS[proposal.tool](validated)
+        record_approval = getattr(self.store, "record_approval", None)
+        if callable(record_approval):
+            record_approval(call_id, approved_by)
+        execution_started = time.perf_counter()
+        try:
+            with metrics.timer("tool_latency_ms"):
+                raw_result = self.adapters[proposal.tool](validated)
+        except Exception as exc:
+            self.store.update_tool_call(
+                incident_id, approved.model_copy(update={"status": "FAILED"})
+            )
+            metrics.increment("tool_failures_total")
+            if self.traces:
+                self.traces.record(
+                    f"tool.{proposal.tool}",
+                    (time.perf_counter() - execution_started) * 1000,
+                    incident_id=incident_id,
+                    status="error",
+                    attributes={"error_type": type(exc).__name__},
+                )
+            raise
+        if len(raw_result) > self.max_rows:
+            raw_result = raw_result[: self.max_rows]
+            metrics.increment("tool_output_truncations_total")
         clean_result, redactions = redact_value(raw_result)
         executed = approved.model_copy(update={"status": "EXECUTED"})
         self.store.update_tool_call(incident_id, executed)
         metrics.increment("tool_calls_total")
         metrics.increment("tool_output_redactions_total", redactions)
+        if self.traces:
+            self.traces.record(
+                f"tool.{proposal.tool}",
+                (time.perf_counter() - execution_started) * 1000,
+                incident_id=incident_id,
+                attributes={"rows": len(clean_result), "redactions": redactions},
+            )
         return ToolExecutionResult(
             tool_call=executed,
             result=clean_result,

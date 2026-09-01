@@ -5,16 +5,70 @@ services:
       APP_ENV: production
       ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       DATABASE_URL: postgresql://incident:incident@postgres:5432/incident_assistant
+      STORAGE_BACKEND: postgres
+      RETRIEVAL_MODE: advanced
+      JOB_BACKEND: rq
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     read_only: true
     tmpfs:
       - /tmp
     security_opt:
       - no-new-privileges:true
+
+  worker:
+    build: .
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "incident-assistant"]
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://incident:incident@postgres:5432/incident_assistant
+      STORAGE_BACKEND: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   postgres:
     image: pgvector/pgvector:pg17
@@ -45,3 +99,4 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:

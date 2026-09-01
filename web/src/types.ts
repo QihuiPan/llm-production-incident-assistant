@@ -48,5 +48,23 @@ export type Investigation = {
     estimated_tokens: number;
     estimated_cost_usd: number;
     config_version: string;
+    llm_ms: number;
+    input_tokens: number;
+    output_tokens: number;
+    provider: string;
+    model: string;
+    cache_hit: boolean;
+    fallback_used: boolean;
   };
+};
+
+export type Dashboard = {
+  trace_count: number;
+  operation_counts: Record<string, number>;
+  p50_latency_ms: number;
+  p95_latency_ms: number;
+  llm_cost_usd: number;
+  token_count: number;
+  cache_hits: number;
+  failures: number;
 };

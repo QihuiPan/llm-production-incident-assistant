@@ -1,4 +1,4 @@
-"""Generate the deterministic 50-case benchmark committed with the project."""
+"""Generate the deterministic 100-case benchmark committed with the project."""
 
 from __future__ import annotations
 
@@ -49,12 +49,13 @@ SCENARIOS = [
 def build_cases() -> list[dict[str, object]]:
     start = datetime(2026, 8, 1, 10, 0, tzinfo=UTC)
     cases: list[dict[str, object]] = []
-    for index in range(50):
+    for index in range(100):
         scenario = SCENARIOS[index % len(SCENARIOS)]
         case_start = start + timedelta(days=index, minutes=index)
         cases.append(
             {
                 "case_id": f"SYN-{index + 1:03d}",
+                "split": "development" if index < 80 else "heldout",
                 "service": scenario["service"],
                 "environment": "production",
                 "alert": scenario["alerts"][index % len(scenario["alerts"])],

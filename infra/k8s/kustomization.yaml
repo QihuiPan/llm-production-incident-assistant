@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: incident-assistant
+resources:
+  - namespace.yaml
+  - runtime.yaml
+  - policy.yaml

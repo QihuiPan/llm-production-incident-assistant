@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llm-production-incident-assistant"
-version = "1.0.0"
+version = "2.0.0"
 description = "A cited, evaluated, read-only assistant for production incident investigation."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,6 +12,11 @@ license = { text = "MIT" }
 authors = [{ name = "QihuiPan" }]
 dependencies = [
   "fastapi>=0.115,<1.0",
+  "httpx2>=2.12,<3.0",
+  "pgvector>=0.4,<1.0",
+  "psycopg[binary]>=3.2,<4.0",
+  "redis>=6.2,<7.0",
+  "rq>=2.6,<3.0",
   "pydantic>=2.10,<3.0",
   "pydantic-settings>=2.7,<3.0",
   "python-multipart>=0.0.20,<1.0",
@@ -21,12 +26,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx2>=2.12,<3.0",
   "pytest>=8.3,<9.0",
   "pytest-cov>=6.0,<8.0",
   "ruff>=0.9,<1.0",
+  "testcontainers>=4.13,<5.0",
 ]
-postgres = ["psycopg[binary]>=3.2,<4.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["api", "retrieval", "tools", "evals", "workers"]
@@ -34,6 +38,7 @@ packages = ["api", "retrieval", "tools", "evals", "workers"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --disable-warnings --maxfail=1"
+markers = ["integration: requires a local Docker daemon"]
 
 [tool.ruff]
 line-length = 100

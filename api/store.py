@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from threading import RLock
 
-from api.models import Evidence, FeedbackRecord, Incident, InvestigationOutput, ToolProposal
+from api.models import (
+    EvaluationReport,
+    Evidence,
+    FeedbackRecord,
+    Incident,
+    IncidentStatus,
+    InvestigationOutput,
+    ToolProposal,
+)
 
 
 class NotFoundError(KeyError):
@@ -21,6 +29,8 @@ class MemoryStore:
         self._evidence: dict[str, list[Evidence]] = {}
         self._tool_calls: dict[str, tuple[str, ToolProposal]] = {}
         self._feedback: dict[str, list[FeedbackRecord]] = {}
+        self._approvals: dict[str, str] = {}
+        self._evaluations: dict[str, EvaluationReport] = {}
 
     def add_incident(self, incident: Incident) -> Incident:
         with self._lock:
@@ -36,6 +46,11 @@ class MemoryStore:
     def save_investigation(self, output: InvestigationOutput) -> InvestigationOutput:
         with self._lock:
             self._investigations[output.incident_id] = output
+            incident = self._incidents.get(output.incident_id)
+            if incident:
+                self._incidents[output.incident_id] = incident.model_copy(
+                    update={"status": IncidentStatus.INVESTIGATING}
+                )
             self._evidence[output.incident_id] = list(output.evidence)
             for proposal in output.next_queries:
                 self._tool_calls[proposal.id] = (output.incident_id, proposal)
@@ -67,11 +82,26 @@ class MemoryStore:
         with self._lock:
             self._tool_calls[proposal.id] = (incident_id, proposal)
 
+    def record_approval(self, call_id: str, approved_by: str) -> None:
+        with self._lock:
+            if call_id not in self._tool_calls:
+                raise NotFoundError(call_id)
+            self._approvals[call_id] = approved_by
+
     def add_feedback(self, feedback: FeedbackRecord) -> FeedbackRecord:
         self.get_incident(feedback.incident_id)
         with self._lock:
             self._feedback.setdefault(feedback.incident_id, []).append(feedback)
         return feedback
+
+    def save_evaluation(self, report: EvaluationReport) -> EvaluationReport:
+        with self._lock:
+            self._evaluations[report.config_version] = report
+        return report
+
+    def list_evaluations(self) -> list[EvaluationReport]:
+        with self._lock:
+            return list(self._evaluations.values())
 
     def clear(self) -> None:
         """Reset process state for deterministic tests."""
@@ -82,3 +112,5 @@ class MemoryStore:
             self._evidence.clear()
             self._tool_calls.clear()
             self._feedback.clear()
+            self._approvals.clear()
+            self._evaluations.clear()

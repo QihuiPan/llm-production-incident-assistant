@@ -18,8 +18,13 @@ INJECTION_PATTERNS = [
 ]
 
 SECRET_PATTERNS = [
-    (re.compile(r"\b(?:sk|pk)_[A-Za-z0-9_-]{16,}\b"), "[REDACTED_API_KEY]"),
+    (re.compile(r"\b(?:sk|pk)[-_][A-Za-z0-9_-]{16,}\b"), "[REDACTED_API_KEY]"),
+    (re.compile(r"\bAKIA[A-Z0-9]{16}\b"), "[REDACTED_ACCESS_KEY]"),
     (re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b", re.IGNORECASE), "Bearer [REDACTED_TOKEN]"),
+    (
+        re.compile(r"postgres(?:ql)?://[^:\s]+:[^@\s]+@", re.IGNORECASE),
+        "postgresql://[REDACTED]@",
+    ),
     (re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"), "[REDACTED_EMAIL]"),
     (re.compile(r"(?i)(password|passwd|secret)\s*[=:]\s*\S+"), r"\1=[REDACTED]"),
 ]

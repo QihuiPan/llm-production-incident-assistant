@@ -18,7 +18,10 @@ def test_investigation_is_grounded_and_proposes_read_only_tools(incident) -> Non
         service="checkout-api",
         environment="production",
         trust_level=TrustLevel.OFFICIAL,
-        content="# Database\nConnection pool exhausted errors follow long transactions.",
+        content=(
+            "# Database\nConnection pool exhausted errors follow long transactions. "
+            "password=hunter2"
+        ),
     )
     index.add(chunk_document(document, target_words=50, overlap_words=5))
     orchestrator = IncidentOrchestrator(store, index, ToolGateway(store))
@@ -34,6 +37,8 @@ def test_investigation_is_grounded_and_proposes_read_only_tools(incident) -> Non
         "get_metrics",
     }
     assert output.metrics.estimated_cost_usd == 0
+    assert "hunter2" not in output.evidence[0].excerpt
+    assert any("redacted" in event for event in output.security_events)
 
 
 def test_no_evidence_returns_safe_degradation(incident) -> None:
