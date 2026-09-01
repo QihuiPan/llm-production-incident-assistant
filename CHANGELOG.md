@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-09-01
+
+### Fixed
+
+- Cast optional PostgreSQL retrieval filters explicitly so prepared pgvector searches work on PostgreSQL 17 without ambiguous parameter types.
+
 ## [2.0.0] - 2026-09-01
 
 ### Added
@@ -38,6 +44,7 @@ All notable changes to this project are documented in this file. The format foll
 - English architecture, API, threat-model, error-analysis, and blueprint-coverage documentation.
 - CI enforcement requiring a changelog update for every behavior-changing pull request.
 
-[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/releases/tag/v1.0.0

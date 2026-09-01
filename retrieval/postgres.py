@@ -105,10 +105,13 @@ class PostgresHybridIndex:
                         ) AS keyword_score,
                         1 - (c.embedding <=> %(embedding)s) AS vector_score
                     FROM chunks c JOIN documents d ON d.id = c.document_id
-                    WHERE (%(service)s IS NULL OR d.service = %(service)s)
+                    WHERE (
+                        CAST(%(service)s AS text) IS NULL
+                        OR d.service = CAST(%(service)s AS text)
+                    )
                       AND (
-                        %(environment)s IS NULL OR d.environment IS NULL
-                        OR d.environment = %(environment)s
+                        CAST(%(environment)s AS text) IS NULL OR d.environment IS NULL
+                        OR d.environment = CAST(%(environment)s AS text)
                       )
                 ), ranked AS (
                     SELECT *,
