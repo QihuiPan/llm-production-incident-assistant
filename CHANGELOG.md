@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- 2026-09-04: Changed the GitHub repository visibility from private to public at the owner's request after checking committed history for credentials and private documents.
+
 ## [2.1.2] - 2026-09-02
 
 ### Fixed
