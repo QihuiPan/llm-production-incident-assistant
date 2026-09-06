@@ -6,6 +6,8 @@ Interactive OpenAPI documentation is available at `http://localhost:8000/docs`.
 | --- | --- | --- |
 | `GET` | `/healthz` | Return readiness, indexed chunk count, and read-only mode. |
 | `GET` | `/metrics` | Export Prometheus counters and summaries. |
+| `GET` | `/api/demo/status` | Describe public-demo availability and allowed synthetic services. |
+| `POST` | `/api/demo/investigate` | Create and investigate one bounded synthetic incident without an API key. |
 | `GET` | `/api/whoami` | Return the authenticated subject and assigned roles. |
 | `GET` | `/api/dashboard` | Aggregate trace count, p50/p95, tokens, cost, cache, and failures. |
 | `GET` | `/api/traces` | List bounded operation traces, optionally by incident. |
@@ -35,6 +37,8 @@ Interactive OpenAPI documentation is available at `http://localhost:8000/docs`.
 
 Roles are hierarchical in the order shown. When authentication is enabled, pass `Authorization: Bearer <api-key>`. The server derives tool approver identity from the authenticated principal.
 
+The public-demo route is the only intentional authentication exception. It accepts the normal incident schema only for the configured synthetic service allowlist, applies per-client and global in-process sliding-window limits, redacts alert text, and returns pending read-only proposals without approving them. Enabling it requires deterministic generation and simulator telemetry at startup. All incident reads, approvals, dashboards, traces, feedback, exports, ingestion, jobs, and evaluation routes keep their normal role checks.
+
 ## Structured investigation output
 
 Every timeline event and hypothesis references evidence IDs returned in the same payload. The server validates those links before persistence. Tool proposals remain `PENDING` until a separate approval request names an approver.
@@ -44,6 +48,7 @@ Every timeline event and hypothesis references evidence IDs returned in the same
 - `400`: unsafe evaluation dataset path.
 - `404`: incident, tool call, or dataset not found.
 - `409`: approval or evaluation policy conflict.
+- `429`: public-demo request budget exhausted; consult the `Retry-After` response header.
 - `401`/`403`: missing, invalid, or insufficient API-key role.
 - `502`: a configured production telemetry source failed safely.
 - `413`: document exceeds the configured size limit.

@@ -15,8 +15,8 @@ This checklist turns every MVP and advanced requirement in the source blueprint 
 | Evaluation | One hundred labelled cases include held-out splits, vector-only and hybrid A/B runs, error attribution, regression gates, and saved reports. |
 | Observability | Request traces expose retrieval, reranking, model, tool, token, cache, cost, and p50/p95 latency summaries. |
 | Background work | Ingestion and evaluation can run through a durable queue with inspectable job status. |
-| User experience | The React workspace supports investigation, evidence review, tool approval, feedback, postmortem export, and operational dashboards. |
+| User experience | Visitors can run prepared synthetic investigations without a key; authenticated owners retain tool approval, feedback, postmortem export, and operational dashboards. |
 | Testing | Unit, contract, security, API, PostgreSQL Testcontainers, evaluation, and Playwright end-to-end suites are automated. |
 | Delivery | Reproducible containers, a free-tier Render demo Blueprint, production-oriented Kubernetes resources, CI, release automation, English documentation, and mandatory changelog enforcement are present. |
 
-Public cloud deployment is an external operation. The repository is complete when its image and deployment artifacts pass verification; publishing a live demo additionally requires an approved hosting account, domain, credentials, and repository visibility policy.
+The approved Render deployment is available at `https://llm-incident-assistant.onrender.com/`. Its public path is constrained to synthetic data, deterministic generation, simulator telemetry, and request limits; owner operations retain API-key RBAC.

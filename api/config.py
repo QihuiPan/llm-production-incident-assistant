@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     tool_backend: Literal["simulator", "production"] = "simulator"
     auth_enabled: bool = False
     api_keys_json: str = "{}"
+    public_demo_enabled: bool = False
+    public_demo_services: str = "checkout-api,payments-api,inventory-api"
+    public_demo_rate_limit_requests: int = Field(default=10, ge=1, le=100)
+    public_demo_rate_limit_window_seconds: int = Field(default=600, ge=60, le=86_400)
+    public_demo_global_limit_requests: int = Field(default=120, ge=1, le=10_000)
+    public_demo_global_limit_window_seconds: int = Field(default=3600, ge=60, le=86_400)
     llm_provider: Literal["deterministic", "openai_compatible"] = "deterministic"
     llm_api_url: str | None = None
     llm_api_key: SecretStr | None = None
@@ -53,6 +59,14 @@ class Settings(BaseSettings):
         """Return normalized browser origins for CORS configuration."""
 
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @property
+    def demo_services(self) -> tuple[str, ...]:
+        """Return the committed services available to anonymous demo requests."""
+
+        return tuple(
+            service.strip() for service in self.public_demo_services.split(",") if service.strip()
+        )
 
 
 @lru_cache

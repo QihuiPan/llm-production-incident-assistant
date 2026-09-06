@@ -3,6 +3,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from api.config import Settings
@@ -69,6 +70,63 @@ def test_api_key_role_matrix_is_enforced_server_side() -> None:
         ).status_code
         == 403
     )
+
+
+def test_public_demo_is_keyless_but_protected_routes_remain_private() -> None:
+    settings = _settings().model_copy(
+        update={
+            "public_demo_enabled": True,
+            "public_demo_rate_limit_requests": 2,
+            "public_demo_global_limit_requests": 2,
+        }
+    )
+    client = TestClient(create_app(settings))
+
+    status = client.get("/api/demo/status")
+    assert status.json() == {
+        "enabled": True,
+        "services": ["checkout-api", "payments-api", "inventory-api"],
+        "synthetic_data_only": True,
+        "api_key_required": False,
+    }
+    investigated = client.post("/api/demo/investigate", json=incident_payload())
+    assert investigated.status_code == 200
+    assert investigated.headers["cache-control"] == "no-store"
+    assert investigated.json()["evidence"]
+    assert all(item["status"] == "PENDING" for item in investigated.json()["next_queries"])
+    assert client.get("/api/dashboard").status_code == 401
+    assert client.post("/api/incidents", json=incident_payload()).status_code == 401
+
+
+def test_public_demo_restricts_services_and_rate() -> None:
+    settings = _settings().model_copy(
+        update={
+            "public_demo_enabled": True,
+            "public_demo_rate_limit_requests": 1,
+            "public_demo_global_limit_requests": 2,
+        }
+    )
+    client = TestClient(create_app(settings))
+    unknown = incident_payload() | {"service": "private-service"}
+    assert client.post("/api/demo/investigate", json=unknown).status_code == 422
+    assert client.post("/api/demo/investigate", json=incident_payload()).status_code == 200
+    limited = client.post("/api/demo/investigate", json=incident_payload())
+    assert limited.status_code == 429
+    assert int(limited.headers["retry-after"]) > 0
+
+
+def test_public_demo_rejects_billable_or_production_backends() -> None:
+    unsafe_model = _settings().model_copy(
+        update={"public_demo_enabled": True, "llm_provider": "openai_compatible"}
+    )
+    with pytest.raises(ValueError, match="LLM_PROVIDER=deterministic"):
+        create_app(unsafe_model)
+
+    unsafe_tools = _settings().model_copy(
+        update={"public_demo_enabled": True, "tool_backend": "production"}
+    )
+    with pytest.raises(ValueError, match="TOOL_BACKEND=simulator"):
+        create_app(unsafe_tools)
 
 
 def test_inline_jobs_expose_inspectable_lifecycle() -> None:

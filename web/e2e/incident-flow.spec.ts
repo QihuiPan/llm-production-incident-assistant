@@ -1,19 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-test("operator completes a cited read-only investigation", async ({ page }) => {
+test("visitor completes a cited public investigation without a key", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Incident Assistant" })).toBeVisible();
-  await page.getByRole("button", { name: "Start investigation" }).click();
+  await expect(page.getByText("No API key required", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Start free demo" }).click();
   await expect(page.getByRole("heading", { name: "Grounded summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Evidence", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Runtime dashboard" })).toBeVisible();
-
-  const approval = page.getByRole("button", { name: "Approve and run" }).first();
-  await approval.click();
-  await expect(page.getByRole("button", { name: "Executed" }).first()).toBeDisabled();
-
-  await page.getByRole("button", { name: "Record positive review" }).click();
-  await expect(page.getByRole("button", { name: "Feedback recorded" })).toBeDisabled();
+  await expect(page.getByText("Public demo result")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Owner key required" }).first()).toBeDisabled();
 });
 
 test("mobile workspace does not overflow horizontally", async ({ page }) => {

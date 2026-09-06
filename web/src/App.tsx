@@ -4,7 +4,9 @@ import {
   configureApiKey,
   createIncident,
   downloadPostmortem,
+  getConfiguredApiKey,
   getDashboard,
+  investigateDemo,
   investigateIncident,
   submitFeedback,
 } from "./api";
@@ -14,6 +16,24 @@ const toLocalInput = (value: Date) => {
   const offset = value.getTimezoneOffset() * 60_000;
   return new Date(value.getTime() - offset).toISOString().slice(0, 16);
 };
+
+const scenarios = [
+  {
+    label: "Checkout 503s",
+    service: "checkout-api",
+    alert: "HTTP 503 spike with connection pool exhausted errors after a deployment",
+  },
+  {
+    label: "Payment timeouts",
+    service: "payments-api",
+    alert: "Payment request errors increased with downstream dependency timeouts",
+  },
+  {
+    label: "Inventory backlog",
+    service: "inventory-api",
+    alert: "Inventory queue depth is rising while consumers are processing slowly",
+  },
+] as const;
 
 function App() {
   const end = useMemo(() => new Date(), []);
@@ -31,7 +51,8 @@ function App() {
   const [approved, setApproved] = useState<Set<string>>(new Set());
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [feedbackSent, setFeedbackSent] = useState(false);
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(getConfiguredApiKey);
+  const hasOwnerAccess = Boolean(apiKey.trim());
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -40,16 +61,18 @@ function App() {
     setApproved(new Set());
     setFeedbackSent(false);
     try {
-      const incident = await createIncident({
+      const payload = {
         service: form.service,
         environment: form.environment,
         alert: form.alert,
         window_start: new Date(form.windowStart).toISOString(),
         window_end: new Date(form.windowEnd).toISOString(),
-      });
-      const result = await investigateIncident(incident.id);
+      };
+      const result = hasOwnerAccess
+        ? await createIncident(payload).then((incident) => investigateIncident(incident.id))
+        : await investigateDemo(payload);
       setInvestigation(result);
-      setDashboard(await getDashboard());
+      setDashboard(hasOwnerAccess ? await getDashboard() : null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Investigation failed");
     } finally {
@@ -92,7 +115,10 @@ function App() {
           <p className="eyebrow">Production operations / read-only</p>
           <h1>Incident Assistant</h1>
         </div>
-        <span className="safety-pill"><i /> Guardrails active</span>
+        <nav className="top-links" aria-label="Project links">
+          <a href="https://github.com/QihuiPan/llm-production-incident-assistant" target="_blank" rel="noreferrer">GitHub ↗</a>
+          <span className="safety-pill"><i /> Guardrails active</span>
+        </nav>
       </header>
 
       <section className="hero">
@@ -100,7 +126,10 @@ function App() {
           <p className="eyebrow accent">Grounded investigation</p>
           <h2>Follow evidence.<br />Keep operators in control.</h2>
         </div>
-        <p className="hero-copy">Correlate alerts with versioned runbooks, reviewed postmortems, and approved telemetry. Every conclusion stays traceable to a real evidence ID.</p>
+        <div className="hero-copy">
+          <p>Correlate alerts with versioned runbooks, reviewed postmortems, and approved telemetry. Every conclusion stays traceable to a real evidence ID.</p>
+          <div className="mode-banner"><strong>Public demo</strong><span>No API key required · synthetic data · zero model cost</span></div>
+        </div>
       </section>
 
       <div className="workspace">
@@ -109,36 +138,59 @@ function App() {
             <span className="step">01</span>
             <div><p className="eyebrow">New workspace</p><h3>Incident context</h3></div>
           </div>
-          <label>Service<input value={form.service} onChange={(event) => setForm({ ...form, service: event.target.value })} required /></label>
+          <fieldset className="scenario-picker">
+            <legend>Try a prepared scenario</legend>
+            <div>
+              {scenarios.map((scenario) => (
+                <button
+                  type="button"
+                  key={scenario.service}
+                  className={form.service === scenario.service ? "selected" : ""}
+                  aria-pressed={form.service === scenario.service}
+                  onClick={() => setForm({ ...form, service: scenario.service, alert: scenario.alert })}
+                >
+                  {scenario.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <label>Service<select value={form.service} onChange={(event) => setForm({ ...form, service: event.target.value })}><option value="checkout-api">checkout-api</option><option value="payments-api">payments-api</option><option value="inventory-api">inventory-api</option></select></label>
           <label>Environment<select value={form.environment} onChange={(event) => setForm({ ...form, environment: event.target.value })}><option>production</option><option>staging</option><option>development</option></select></label>
-          <label>API key <span className="optional">optional for local demo</span><input type="password" autoComplete="off" value={apiKey} onChange={(event) => { setApiKey(event.target.value); configureApiKey(event.target.value); }} /></label>
+          <details className="owner-access">
+            <summary>Owner access <span>optional</span></summary>
+            <label>Administrator API key<input type="password" autoComplete="off" value={apiKey} onChange={(event) => { setApiKey(event.target.value); configureApiKey(event.target.value); }} /></label>
+            <p>Unlocks protected telemetry approval, dashboard, feedback, and export actions. The key stays in this browser tab.</p>
+          </details>
           <label>Alert payload<textarea rows={5} value={form.alert} onChange={(event) => setForm({ ...form, alert: event.target.value })} required /></label>
+          <p className="privacy-note"><strong>Synthetic data only.</strong> Do not paste real logs, secrets, customer data, or personal information into this public demo.</p>
           <div className="time-grid">
             <label>Window start<input type="datetime-local" value={form.windowStart} onChange={(event) => setForm({ ...form, windowStart: event.target.value })} required /></label>
             <label>Window end<input type="datetime-local" value={form.windowEnd} onChange={(event) => setForm({ ...form, windowEnd: event.target.value })} required /></label>
           </div>
-          <button className="primary" disabled={busy}>{busy ? "Investigating…" : "Start investigation"}<span aria-hidden="true">→</span></button>
+          <button className="primary" disabled={busy}>{busy ? "Investigating…" : "Start free demo"}<span aria-hidden="true">→</span></button>
           <p className="boundary"><strong>Boundary:</strong> No deploys, restarts, rollbacks, or data mutations.</p>
         </form>
 
         <section className="results" aria-live="polite">
           {error && <div className="error" role="alert">{error}</div>}
           {!investigation && !busy && (
-            <div className="empty-state"><span>⌁</span><h3>Evidence will appear here</h3><p>Create an incident to run hybrid retrieval and prepare bounded tool queries.</p></div>
+            <div className="empty-state"><span>⌁</span><h3>Ready when you are</h3><p>Choose a prepared incident and start the free demo. No account or API key is required.</p></div>
           )}
-          {busy && <div className="empty-state"><span className="spinner" /><h3>Building an evidence map</h3><p>Filtering sources, fusing rankings, and validating citations.</p></div>}
+          {busy && <div className="empty-state"><span className="spinner" /><h3>Building an evidence map</h3><p>Filtering sources, fusing rankings, and validating citations. A sleeping free service can take about one minute to wake.</p></div>}
           {investigation && !busy && (
             <InvestigationView
               investigation={investigation}
               approved={approved}
               dashboard={dashboard}
               feedbackSent={feedbackSent}
+              hasOwnerAccess={hasOwnerAccess}
               onApprove={approve}
               onFeedback={sendFeedback}
             />
           )}
         </section>
       </div>
+      <footer><span>Open-source portfolio demo · v2.2.0</span><span>Deterministic model · simulator telemetry · read-only by design</span></footer>
     </main>
   );
 }
@@ -148,6 +200,7 @@ function InvestigationView({
   approved,
   dashboard,
   feedbackSent,
+  hasOwnerAccess,
   onApprove,
   onFeedback,
 }: {
@@ -155,6 +208,7 @@ function InvestigationView({
   approved: Set<string>;
   dashboard: Dashboard | null;
   feedbackSent: boolean;
+  hasOwnerAccess: boolean;
   onApprove: (proposal: ToolProposal) => void;
   onFeedback: () => void;
 }) {
@@ -182,6 +236,13 @@ function InvestigationView({
             <span><strong>{dashboard.p95_latency_ms.toFixed(1)} ms</strong> p95</span>
             <span><strong>{dashboard.failures}</strong> failures</span>
           </div>
+        </section>
+      )}
+
+      {!hasOwnerAccess && (
+        <section className="public-boundary" aria-label="Public demo limitations">
+          <strong>Public demo result</strong>
+          <span>Evidence and hypotheses are available now. Owner-only operational actions stay locked.</span>
         </section>
       )}
 
@@ -220,7 +281,7 @@ function InvestigationView({
           {investigation.next_queries.map((proposal) => (
             <article key={proposal.id}>
               <code>{proposal.tool}</code><p>{proposal.reason}</p>
-              <button className="secondary" disabled={approved.has(proposal.id)} onClick={() => onApprove(proposal)}>{approved.has(proposal.id) ? "Executed" : "Approve and run"}</button>
+              <button type="button" className="secondary" disabled={!hasOwnerAccess || approved.has(proposal.id)} title={!hasOwnerAccess ? "Owner API key required" : undefined} onClick={() => onApprove(proposal)}>{approved.has(proposal.id) ? "Executed" : hasOwnerAccess ? "Approve and run" : "Owner key required"}</button>
             </article>
           ))}
         </section>
@@ -231,8 +292,8 @@ function InvestigationView({
       <section className="panel review-actions">
         <div><p className="eyebrow">Operator review</p><h3>Close the evidence loop</h3></div>
         <div>
-          <button className="secondary" onClick={() => downloadPostmortem(investigation.incident_id)}>Export postmortem</button>
-          <button className="secondary" disabled={feedbackSent} onClick={onFeedback}>{feedbackSent ? "Feedback recorded" : "Record positive review"}</button>
+          <button type="button" className="secondary" disabled={!hasOwnerAccess} title={!hasOwnerAccess ? "Owner API key required" : undefined} onClick={() => downloadPostmortem(investigation.incident_id)}>{hasOwnerAccess ? "Export postmortem" : "Export locked"}</button>
+          <button type="button" className="secondary" disabled={!hasOwnerAccess || feedbackSent} title={!hasOwnerAccess ? "Owner API key required" : undefined} onClick={onFeedback}>{feedbackSent ? "Feedback recorded" : hasOwnerAccess ? "Record positive review" : "Review locked"}</button>
         </div>
       </section>
     </>

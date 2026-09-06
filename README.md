@@ -1,6 +1,8 @@
 # LLM Production Incident Assistant
 
-A cited, evaluated, read-only assistant for production incident investigation. The flagship v2 runtime combines PostgreSQL/pgvector retrieval, strict structured model output, approval-gated production telemetry, RBAC, durable jobs, trace dashboards, offline A/B evaluation, and a responsive operator workspace.
+A cited, evaluated, read-only assistant for production incident investigation. The v2.2 runtime combines PostgreSQL/pgvector retrieval, strict structured model output, approval-gated production telemetry, RBAC, abuse-resistant public demo access, offline A/B evaluation, and a responsive operator workspace.
+
+[Try the live demo](https://llm-incident-assistant.onrender.com/) · [OpenAPI](https://llm-incident-assistant.onrender.com/docs) · [Latest release](https://github.com/QihuiPan/llm-production-incident-assistant/releases/latest)
 
 > Safety boundary: this assistant cannot restart services, deploy code, modify records, or execute arbitrary commands. Every tool is read-only, server-allowlisted, strictly validated, budgeted, audited, and separately approved by a human.
 
@@ -16,7 +18,14 @@ A cited, evaluated, read-only assistant for production incident investigation. T
 - API-key RBAC, Redis Queue jobs, persistent model cache/cost budgets, and p50/p95 traces.
 - Testcontainers, Playwright desktop/mobile E2E, Compose, Kubernetes, and release-image automation.
 - A zero-monthly-cost Render Blueprint that serves the React workspace and authenticated API from one free web service backed by free PostgreSQL.
+- A keyless, rate-limited public investigation path over three synthetic scenarios, with every administrative route still protected by RBAC.
 - A responsive React workspace with evidence, timeline, approvals, dashboard, feedback, and export.
+
+## Use the hosted demo
+
+Open the [live workspace](https://llm-incident-assistant.onrender.com/), choose one of the checkout, payments, or inventory scenarios, and select **Start free demo**. Visitors do not need an account, application key, or model key. The demo uses committed synthetic runbooks, deterministic grounded generation, and simulator telemetry, so it cannot contact production systems or incur model usage charges.
+
+The Render free service may need about one minute to wake after inactivity. Public requests are rate-limited per client and across the service. Use synthetic text only: do not submit real logs, credentials, customer data, or personal information. Tool approval, runtime dashboards, feedback, exports, document ingestion, and evaluations remain owner-only operations that require an administrator API key.
 
 ## Quick start
 
@@ -51,9 +60,9 @@ This starts the web workspace, API, PostgreSQL with pgvector, Redis, an RQ worke
 
 ### Render deployment
 
-`render.yaml` provisions one combined free web service and one free PostgreSQL 17 database in Singapore. Connect the private repository to Render, create a Blueprint from the repository, and provide `API_KEYS_JSON` only when prompted. The container applies the idempotent pgvector schema before serving the bundled React workspace and FastAPI routes from one origin.
+`render.yaml` provisions one combined free web service and one free PostgreSQL 17 database in Singapore. Connect the repository to Render, create a Blueprint from the repository, and provide `API_KEYS_JSON` only when prompted. The container applies the idempotent pgvector schema before serving the bundled React workspace, a bounded public demo route, and protected FastAPI administration routes from one origin.
 
-The Blueprint selects only Render resources with the `free` plan. The demo uses inline jobs because free background workers are unavailable. Free web services sleep after inactivity, and free Render PostgreSQL expires after 30 days. No OpenAI or production-telemetry secret is required for the safe simulator demo. See [deployment.md](docs/deployment.md) for the exact limitations and smoke-test workflow.
+The Blueprint selects only Render resources with the `free` plan. The demo uses inline jobs because free background workers are unavailable. Free web services sleep after inactivity, and free Render PostgreSQL expires after 30 days. No OpenAI or production-telemetry secret is required for the safe simulator demo. `PUBLIC_DEMO_ENABLED=true` is deliberately incompatible with external models and production telemetry to prevent anonymous cost or data access. See [deployment.md](docs/deployment.md) for the exact limitations and smoke-test workflow.
 
 ## Production configuration
 

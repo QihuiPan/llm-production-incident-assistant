@@ -25,6 +25,8 @@ Uploaded documents, retrieved chunks, alerts, and tool output are untrusted data
 | Malicious file | Type allowlist, size limit, UTF-8 requirement, passive PDF extraction | API and ingestion tests |
 | Dataset path traversal | Evaluation path constrained to `evals/datasets` | `tests/test_api.py` |
 | API-key role bypass | Constant-time key comparison and endpoint role dependencies | `tests/test_auth_runtime.py` |
+| Anonymous demo abuse | Dedicated endpoint, synthetic-service allowlist, per-client and global rate limits, deterministic model, simulator-only startup invariant | `tests/test_auth_runtime.py`, `tests/test_rate_limit.py` |
+| Anonymous access to operational data | Public route returns only its investigation response; all reads, approvals, dashboards, exports, ingestion, and evaluation remain authenticated | `tests/test_auth_runtime.py` |
 | SSRF through a tool argument | No URL argument exists; configured base URLs require absolute HTTP(S) without user information | `tests/test_production_adapters.py` |
 | External model schema drift | Strict JSON Schema, one repair, fallback chain, and pre-save citation validation | `tests/test_llm.py` |
 | Lost approval or trace audit | PostgreSQL approver, tool state, evidence, trace, and job records | `tests/test_postgres_integration.py` |

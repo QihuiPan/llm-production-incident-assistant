@@ -9,6 +9,10 @@ export function configureApiKey(value: string): void {
   else sessionStorage.removeItem("incident-assistant-api-key");
 }
 
+export function getConfiguredApiKey(): string {
+  return apiKey;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -19,8 +23,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!response.ok) {
-    const detail = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(detail.detail ?? "Request failed");
+    const payload = await response.json().catch(() => ({ detail: response.statusText }));
+    const detail = Array.isArray(payload.detail)
+      ? payload.detail.map((item: { msg?: string }) => item.msg ?? "Invalid input").join("; ")
+      : payload.detail;
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After");
+      throw new Error(
+        `${detail ?? "Public demo rate limit reached"}. Try again${retryAfter ? ` in ${retryAfter} seconds` : " later"}.`,
+      );
+    }
+    throw new Error(detail ?? "Request failed");
   }
   return response.json() as Promise<T>;
 }
@@ -31,6 +44,12 @@ export function createIncident(payload: Omit<Incident, "id" | "status">): Promis
 
 export function investigateIncident(id: string): Promise<Investigation> {
   return request(`/api/incidents/${id}/investigate`, { method: "POST" });
+}
+
+export function investigateDemo(
+  payload: Omit<Incident, "id" | "status">,
+): Promise<Investigation> {
+  return request("/api/demo/investigate", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function approveTool(id: string): Promise<void> {

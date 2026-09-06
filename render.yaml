@@ -31,6 +31,18 @@ services:
         value: "true"
       - key: API_KEYS_JSON
         sync: false
+      - key: PUBLIC_DEMO_ENABLED
+        value: "true"
+      - key: PUBLIC_DEMO_SERVICES
+        value: checkout-api,payments-api,inventory-api
+      - key: PUBLIC_DEMO_RATE_LIMIT_REQUESTS
+        value: "10"
+      - key: PUBLIC_DEMO_RATE_LIMIT_WINDOW_SECONDS
+        value: "600"
+      - key: PUBLIC_DEMO_GLOBAL_LIMIT_REQUESTS
+        value: "120"
+      - key: PUBLIC_DEMO_GLOBAL_LIMIT_WINDOW_SECONDS
+        value: "3600"
       - key: ALLOWED_ORIGINS
         value: ""
       - key: LLM_PROVIDER

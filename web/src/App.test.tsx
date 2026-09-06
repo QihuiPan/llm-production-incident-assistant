@@ -7,6 +7,7 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByText("Incident Assistant")).toBeInTheDocument();
     expect(screen.getByText(/No deploys, restarts, rollbacks, or data mutations/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Start investigation/i })).toBeEnabled();
+    expect(screen.getByText(/No API key required/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Start free demo/i })).toBeEnabled();
   });
 });

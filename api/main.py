@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Literal
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +43,7 @@ from api.models import (
 from api.observability import metrics
 from api.orchestrator import IncidentOrchestrator
 from api.postmortem import render_postmortem
+from api.rate_limit import SlidingWindowRateLimiter
 from api.runtime import build_runtime
 from api.security import redact_text
 from api.store import NotFoundError
@@ -61,7 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(
         title="LLM Production Incident Assistant",
-        version="2.1.2",
+        version="2.2.0",
         description=(
             "A cited, evaluated, read-only assistant for production incident investigation."
         ),
@@ -73,6 +74,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type", "Authorization"],
     )
+
+    if settings.public_demo_enabled and settings.llm_provider != "deterministic":
+        raise ValueError("PUBLIC_DEMO_ENABLED requires LLM_PROVIDER=deterministic")
+    if settings.public_demo_enabled and settings.tool_backend != "simulator":
+        raise ValueError("PUBLIC_DEMO_ENABLED requires TOOL_BACKEND=simulator")
 
     runtime = build_runtime(settings)
     store = runtime.store
@@ -91,6 +97,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         retrieval_mode=settings.retrieval_mode,
         llm_service=runtime.llm_service,
         traces=traces,
+    )
+    demo_available = settings.public_demo_enabled or not settings.auth_enabled
+    demo_client_limiter = SlidingWindowRateLimiter(
+        settings.public_demo_rate_limit_requests,
+        settings.public_demo_rate_limit_window_seconds,
+    )
+    demo_global_limiter = SlidingWindowRateLimiter(
+        settings.public_demo_global_limit_requests,
+        settings.public_demo_global_limit_window_seconds,
     )
     app.state.store = store
     app.state.index = index
@@ -142,11 +157,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "retrieval_mode": settings.retrieval_mode,
             "tool_backend": settings.tool_backend,
             "auth_enabled": settings.auth_enabled,
+            "public_demo_enabled": demo_available,
         }
 
     @app.get("/metrics", response_class=PlainTextResponse)
     def prometheus_metrics() -> str:
         return metrics.render_prometheus()
+
+    @app.get("/api/demo/status")
+    def demo_status() -> dict[str, object]:
+        return {
+            "enabled": demo_available,
+            "services": list(settings.demo_services),
+            "synthetic_data_only": True,
+            "api_key_required": False,
+        }
 
     @app.get("/api/whoami")
     def whoami(principal: Principal = Depends(viewer)) -> dict[str, object]:
@@ -218,10 +243,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             injection_flagged=flagged,
         )
 
-    @app.post("/api/incidents", response_model=Incident, status_code=201)
-    def create_incident(
-        payload: IncidentCreate, _: Principal = Depends(operator)
-    ) -> Incident:
+    def persist_incident(payload: IncidentCreate) -> Incident:
         safe_alert, redactions = redact_text(payload.alert)
         incident = Incident(**payload.model_dump(exclude={"alert"}), alert=safe_alert)
         store.add_incident(incident)
@@ -229,6 +251,53 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if redactions:
             metrics.increment("incident_redactions_total", redactions)
         return incident
+
+    @app.post("/api/demo/investigate", response_model=InvestigationOutput)
+    def investigate_demo(
+        payload: IncidentCreate,
+        request: Request,
+        response: Response,
+    ) -> InvestigationOutput:
+        if not demo_available:
+            raise HTTPException(status_code=404, detail="public demo is not enabled")
+        if payload.service not in settings.demo_services:
+            allowed = ", ".join(settings.demo_services)
+            raise HTTPException(
+                status_code=422,
+                detail=f"public demo service must be one of: {allowed}",
+            )
+
+        client_key = request.client.host if request.client else "unknown"
+        client_decision = demo_client_limiter.check(client_key)
+        if not client_decision.allowed:
+            metrics.increment("public_demo_rate_limited_total")
+            raise HTTPException(
+                status_code=429,
+                detail="public demo rate limit reached",
+                headers={"Retry-After": str(client_decision.retry_after_seconds)},
+            )
+        global_decision = demo_global_limiter.check("public-demo")
+        if not global_decision.allowed:
+            metrics.increment("public_demo_rate_limited_total")
+            raise HTTPException(
+                status_code=429,
+                detail="public demo rate limit reached",
+                headers={"Retry-After": str(global_decision.retry_after_seconds)},
+            )
+
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-RateLimit-Remaining"] = str(
+            min(client_decision.remaining, global_decision.remaining)
+        )
+        result = orchestrator.investigate(persist_incident(payload))
+        metrics.increment("public_demo_investigations_total")
+        return result
+
+    @app.post("/api/incidents", response_model=Incident, status_code=201)
+    def create_incident(
+        payload: IncidentCreate, _: Principal = Depends(operator)
+    ) -> Incident:
+        return persist_incident(payload)
 
     @app.get("/api/incidents/{incident_id}", response_model=Incident)
     def get_incident(

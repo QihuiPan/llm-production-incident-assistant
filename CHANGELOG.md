@@ -6,9 +6,22 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+Reserved for the next change.
+
+## [2.2.0] - 2026-09-07
+
+### Added
+
+- A keyless public investigation endpoint limited to committed synthetic services, with per-client and global sliding-window request budgets.
+- Prepared checkout, payments, and inventory scenarios, public-demo onboarding, privacy guidance, cold-start messaging, and direct GitHub links in the web workspace.
+- Automated coverage for anonymous investigations, protected-route isolation, service allowlisting, rate limits, and unsafe backend combinations.
+
 ### Changed
 
 - 2026-09-04: Changed the GitHub repository visibility from private to public at the owner's request after checking committed history for credentials and private documents.
+- Keep owner-only approvals, dashboards, feedback, postmortem export, ingestion, jobs, traces, and evaluations behind API-key RBAC while public investigations need no key.
+- Require deterministic generation and simulator telemetry whenever public demo access is enabled, preventing anonymous model charges or production data access.
+- Document the live zero-cost Render demo, public safety boundary, first-use flow, and the requirement to disable public access before configuring an external model.
 
 ## [2.1.2] - 2026-09-02
 
@@ -81,7 +94,8 @@ All notable changes to this project are documented in this file. The format foll
 - English architecture, API, threat-model, error-analysis, and blueprint-coverage documentation.
 - CI enforcement requiring a changelog update for every behavior-changing pull request.
 
-[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.2...v2.2.0
 [2.1.2]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.1...v2.1.0

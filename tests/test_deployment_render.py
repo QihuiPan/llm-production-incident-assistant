@@ -38,6 +38,9 @@ def test_render_blueprint_uses_only_free_resources() -> None:
     assert "dockerCommand" not in web
     assert web_env["JOB_BACKEND"]["value"] == "inline"
     assert web_env["API_KEYS_JSON"] == {"key": "API_KEYS_JSON", "sync": False}
+    assert web_env["PUBLIC_DEMO_ENABLED"]["value"] == "true"
+    assert web_env["LLM_PROVIDER"]["value"] == "deterministic"
+    assert web_env["TOOL_BACKEND"]["value"] == "simulator"
     assert web_env["DATABASE_URL"]["fromDatabase"]["property"] == "connectionString"
     assert "REDIS_URL" not in web_env
     assert database["plan"] == "free"

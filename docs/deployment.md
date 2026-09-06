@@ -22,26 +22,27 @@ The stack exposes the workspace on port 5173, API on 8000, PostgreSQL on 5432, a
 
 The committed Blueprint creates the following topology in the `singapore` region:
 
-- One free web service that serves the bundled React workspace and authenticated FastAPI routes from the same origin.
+- One free web service that serves the bundled React workspace, keyless bounded demo route, and authenticated administration routes from the same origin.
 - One free PostgreSQL 17 database with pgvector and no public IP allowlist.
 
 Every resource in `render.yaml` explicitly selects the `free` plan. Render does not provide free Private Service or Background Worker instances, so this public-demo profile uses an inline thread pool for inspectable ingestion and evaluation jobs. The production Compose and Kubernetes targets retain the separate API, queue, and worker boundaries.
 
-1. Sign in to Render and install the Render GitHub App for only this private repository.
+1. Sign in to Render and install the Render GitHub App for this repository.
 2. Create a Blueprint from the repository and select `render.yaml`.
 3. Confirm that the proposed resource names and `singapore` region are acceptable.
 4. Provide `API_KEYS_JSON` when Render prompts for the `sync: false` secret. A suitable administrator record is `{"generated-secret":{"subject":"owner@example.com","roles":["administrator"]}}`; replace both placeholders and store the generated key outside the repository.
 5. Verify that the estimated monthly price is zero before deploying. The container startup command runs `python -m api.migrate`, which enables pgvector and applies the idempotent schema.
 6. Wait for the database and combined web service to become healthy.
-7. Open the web service URL, enter the generated application key, create the documented checkout incident, run an investigation, approve one simulator proposal, and inspect the dashboard and postmortem export.
+7. Open the web service URL without a key, run each prepared scenario, and confirm that evidence appears while owner-only actions stay locked.
+8. Enter the generated application key under **Owner access**, rerun a scenario, approve one simulator proposal, and inspect the dashboard and postmortem export.
 
-The browser sends API calls to the same public origin. API-key authentication remains enabled, and the database accepts no public IP ranges. Render injects the database connection string through a Blueprint reference, so its credentials are never committed.
+The browser sends API calls to the same public origin. `PUBLIC_DEMO_ENABLED=true` opens only `/api/demo/status` and `/api/demo/investigate`; API-key authentication remains enabled for every operational route, and the database accepts no public IP ranges. The public endpoint accepts only the three committed synthetic services and has both per-client and service-wide request limits. Render injects the database connection string through a Blueprint reference, so its credentials are never committed.
 
 The free profile is a portfolio demonstration, not a production topology. Render free web services spin down after 15 minutes without inbound traffic and can take about one minute to wake. A workspace receives 750 free instance hours per month. The service filesystem is ephemeral, and free PostgreSQL is limited to 1 GB, has no backups, and expires 30 days after creation. Recreate the free database or upgrade it before expiry if the demo must remain available.
 
 To add a custom domain, attach the web hostname in Render and create the requested DNS record with the domain provider. Render provisions and renews TLS. No API subdomain is required.
 
-For a real OpenAI deployment, add `LLM_PROVIDER=openai_compatible`, `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL`, explicit input/output price variables, and the approved daily budget as server-side Render environment secrets. For production telemetry, move to the production topology, add the four fixed telemetry URLs and optional bearer token, then change `TOOL_BACKEND` only for a private canary. Never expose model or telemetry secrets in the web build.
+For a real OpenAI deployment, first set `PUBLIC_DEMO_ENABLED=false`, then add `LLM_PROVIDER=openai_compatible`, `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL`, explicit input/output price variables, and the approved daily budget as server-side Render environment secrets. This prevents anonymous visitors from spending the model budget. For production telemetry, move to the production topology, add the four fixed telemetry URLs and optional bearer token, then change `TOOL_BACKEND` only for a private canary. Never expose model or telemetry secrets in the web build.
 
 Rollback by selecting one of the two previous successful web-service deploys available to free instances. The migration is additive and idempotent; do not delete schema objects during an application rollback. Free PostgreSQL has no managed backups.
 
@@ -85,4 +86,4 @@ Rollback by restoring the prior pinned API and web image tags. The v2 schema cha
 
 ## Public demo boundary
 
-Repository delivery does not authorize publishing data or changing GitHub visibility. A public deployment requires the owner's explicit approval of the Render account, region, optional domain, and application credentials. Verify a zero-dollar estimate when using the free-demo Blueprint. Use simulator tools and synthetic data for any public demo.
+Repository delivery does not authorize publishing data or changing GitHub visibility. A public deployment requires the owner's explicit approval of the Render account, region, optional domain, and application credentials. Verify a zero-dollar estimate when using the free-demo Blueprint. Keep the public route on deterministic generation, simulator tools, and synthetic data; the application refuses to start when public demo access is combined with a billable model or production telemetry.
