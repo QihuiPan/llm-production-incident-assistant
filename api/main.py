@@ -42,6 +42,7 @@ from api.models import (
 )
 from api.observability import metrics
 from api.orchestrator import IncidentOrchestrator
+from api.platform_telemetry import install, render_metrics
 from api.postmortem import render_postmortem
 from api.rate_limit import SlidingWindowRateLimiter
 from api.runtime import build_runtime
@@ -67,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "A cited, evaluated, read-only assistant for production incident investigation."
         ),
     )
+    install(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.origins,
@@ -161,8 +163,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @app.get("/metrics", response_class=PlainTextResponse)
-    def prometheus_metrics() -> str:
-        return metrics.render_prometheus()
+    def prometheus_metrics() -> Response:
+        return Response(
+            metrics.render_prometheus() + render_metrics(),
+            media_type="application/openmetrics-text; version=1.0.0; charset=utf-8",
+        )
 
     @app.get("/api/demo/status")
     def demo_status() -> dict[str, object]:
@@ -207,12 +212,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/documents", response_model=DocumentIngestResponse, status_code=202)
     async def ingest_document(
         file: UploadFile = File(...),
-        service: str = Form(
-            ..., min_length=2, max_length=80, pattern=r"^[a-zA-Z0-9._-]+$"
-        ),
-        environment: Literal["production", "staging", "development"] | None = Form(
-            default=None
-        ),
+        service: str = Form(..., min_length=2, max_length=80, pattern=r"^[a-zA-Z0-9._-]+$"),
+        environment: Literal["production", "staging", "development"] | None = Form(default=None),
         version: str = Form(default="1.0.0", min_length=1, max_length=80),
         trust_level: TrustLevel = Form(default=TrustLevel.UNVERIFIED),
         _: Principal = Depends(administrator),
@@ -294,33 +295,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return result
 
     @app.post("/api/incidents", response_model=Incident, status_code=201)
-    def create_incident(
-        payload: IncidentCreate, _: Principal = Depends(operator)
-    ) -> Incident:
+    def create_incident(payload: IncidentCreate, _: Principal = Depends(operator)) -> Incident:
         return persist_incident(payload)
 
     @app.get("/api/incidents/{incident_id}", response_model=Incident)
-    def get_incident(
-        incident_id: str, _: Principal = Depends(viewer)
-    ) -> Incident:
+    def get_incident(incident_id: str, _: Principal = Depends(viewer)) -> Incident:
         try:
             return store.get_incident(incident_id)
         except NotFoundError as exc:
             raise HTTPException(status_code=404, detail="incident not found") from exc
 
     @app.post("/api/incidents/{incident_id}/investigate", response_model=InvestigationOutput)
-    def investigate(
-        incident_id: str, _: Principal = Depends(operator)
-    ) -> InvestigationOutput:
+    def investigate(incident_id: str, _: Principal = Depends(operator)) -> InvestigationOutput:
         try:
             return orchestrator.investigate(store.get_incident(incident_id))
         except NotFoundError as exc:
             raise HTTPException(status_code=404, detail="incident not found") from exc
 
     @app.get("/api/incidents/{incident_id}/evidence", response_model=list[Evidence])
-    def list_evidence(
-        incident_id: str, _: Principal = Depends(viewer)
-    ) -> list[Evidence]:
+    def list_evidence(incident_id: str, _: Principal = Depends(viewer)) -> list[Evidence]:
         try:
             return store.list_evidence(incident_id)
         except NotFoundError as exc:
@@ -330,9 +323,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "/api/incidents/{incident_id}/postmortem",
         response_class=PlainTextResponse,
     )
-    def export_postmortem(
-        incident_id: str, _: Principal = Depends(viewer)
-    ) -> str:
+    def export_postmortem(incident_id: str, _: Principal = Depends(viewer)) -> str:
         try:
             incident = store.get_incident(incident_id)
             investigation = store.get_investigation(incident_id)
@@ -410,12 +401,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/jobs/documents", response_model=BackgroundJob, status_code=202)
     async def queue_document(
         file: UploadFile = File(...),
-        service: str = Form(
-            ..., min_length=2, max_length=80, pattern=r"^[a-zA-Z0-9._-]+$"
-        ),
-        environment: Literal["production", "staging", "development"] | None = Form(
-            default=None
-        ),
+        service: str = Form(..., min_length=2, max_length=80, pattern=r"^[a-zA-Z0-9._-]+$"),
+        environment: Literal["production", "staging", "development"] | None = Form(default=None),
         version: str = Form(default="1.0.0", min_length=1, max_length=80),
         trust_level: TrustLevel = Form(default=TrustLevel.UNVERIFIED),
         _: Principal = Depends(administrator),
@@ -454,18 +441,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return public_job(job_manager.submit("ingestion", job_payload, ingest_job))
 
     @app.get("/api/jobs/{job_id}", response_model=BackgroundJob)
-    def get_job(
-        job_id: str, _: Principal = Depends(viewer)
-    ) -> BackgroundJob:
+    def get_job(job_id: str, _: Principal = Depends(viewer)) -> BackgroundJob:
         try:
             return public_job(job_repository.get(job_id))
         except NotFoundError as exc:
             raise HTTPException(status_code=404, detail="job not found") from exc
 
     @app.post("/api/evaluations/run", response_model=EvaluationReport)
-    def evaluate(
-        payload: EvaluationRequest, _: Principal = Depends(evaluator)
-    ) -> EvaluationReport:
+    def evaluate(payload: EvaluationRequest, _: Principal = Depends(evaluator)) -> EvaluationReport:
         candidate = resolve_dataset(payload.dataset)
         try:
             report = run_evaluation(candidate, strict=payload.strict)
