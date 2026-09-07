@@ -165,7 +165,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/metrics", response_class=PlainTextResponse)
     def prometheus_metrics() -> Response:
         return Response(
-            metrics.render_prometheus() + render_metrics(),
+            render_metrics(metrics.render_prometheus()),
             media_type="application/openmetrics-text; version=1.0.0; charset=utf-8",
         )
 

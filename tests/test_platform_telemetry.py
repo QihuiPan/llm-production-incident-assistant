@@ -41,3 +41,19 @@ def test_provider_failure_creates_error_span():
         raise RuntimeError("Provider timeout")
     assert exporter.get_finished_spans()[-1].name == "llm.provider"
     assert exporter.get_finished_spans()[-1].status.is_ok is False
+
+
+def test_openmetrics_combines_legacy_and_exemplars():
+    from prometheus_client.openmetrics.parser import text_string_to_metric_families
+
+    from api.platform_telemetry import render_metrics
+
+    legacy = "# TYPE llm_calls_total counter\nllm_calls_total 2\n"
+    families = list(text_string_to_metric_families(render_metrics(legacy)))
+    assert any(
+        sample.name == "llm_calls_total" and sample.value == 2
+        for family in families
+        for sample in family.samples
+    )
+    assert any(family.name == "http_requests" for family in families)
+    assert list(text_string_to_metric_families(render_metrics("\n")))

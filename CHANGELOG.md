@@ -108,3 +108,4 @@ Reserved for the next change.
 - Added optional OTLP request/dependency traces and correlated logs without exporting prompts or responses.
 - Added bounded HTTP SLO counters, exact 300ms histogram buckets and exemplars.
 - Preserved legacy metrics and existing fallback behavior; added telemetry regression tests.
+- Serialize legacy counters and platform exemplars through one valid OpenMetrics registry; add parser regression coverage.

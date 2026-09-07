@@ -19,6 +19,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from prometheus_client import CollectorRegistry, Counter, Histogram
 from prometheus_client.openmetrics.exposition import generate_latest
+from prometheus_client.parser import text_string_to_metric_families
 
 REGISTRY = CollectorRegistry()
 SERVICE = os.getenv("OTEL_SERVICE_NAME", "llm-assistant")
@@ -69,8 +70,15 @@ def provider_span():
             raise
 
 
-def render_metrics() -> str:
-    return generate_latest(REGISTRY).decode()
+def render_metrics(legacy: str = "") -> str:
+    class CombinedCollector:
+        def collect(self):
+            yield from text_string_to_metric_families(legacy)
+            yield from REGISTRY.collect()
+
+    combined = CollectorRegistry()
+    combined.register(CombinedCollector())
+    return generate_latest(combined).decode()
 
 
 def install(app) -> None:
