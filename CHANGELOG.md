@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
-Reserved for the next change.
+- Select bounded fast-request exemplars, retain error/slow exemplars, and mark their OpenTelemetry spans for the platform tail-sampling policy. Verify exact trace identifiers and retention markers in request tests.
 
 ## [2.2.0] - 2026-09-07
 
