@@ -102,3 +102,10 @@ Reserved for the next change.
 [2.0.1]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/QihuiPan/llm-production-incident-assistant/releases/tag/v1.0.0
+
+## Observability integration - 2026-09-07
+
+- Added optional OTLP request/dependency traces and correlated logs without exporting prompts or responses.
+- Added bounded HTTP SLO counters, exact 300ms histogram buckets and exemplars.
+- Preserved legacy metrics and existing fallback behavior; added telemetry regression tests.
+- Serialize legacy counters and platform exemplars through one valid OpenMetrics registry; add parser regression coverage.

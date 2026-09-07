@@ -16,6 +16,7 @@ import psycopg
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from api.models import Evidence, Hypothesis, Incident, TimelineEvent
+from api.platform_telemetry import provider_span
 from api.security import redact_text
 
 SYSTEM_PROMPT = (Path(__file__).resolve().parents[1] / "prompts" / "system.md").read_text(
@@ -584,7 +585,8 @@ class LLMService:
             result = self.fallback.generate(incident, evidence)
             return replace(result, fallback_used=True)
         try:
-            result = self.provider.generate(incident, evidence)
+            with provider_span():
+                result = self.provider.generate(incident, evidence)
         except LLMProviderError:
             fallback = self.fallback.generate(incident, evidence)
             result = replace(fallback, fallback_used=True)
