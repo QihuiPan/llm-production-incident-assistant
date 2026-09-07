@@ -103,11 +103,17 @@ def install(app) -> None:
                 context = span.get_span_context()
                 trace_id = format(context.trace_id, "032x")
                 if status < 400 or status >= 500:
+                    elapsed = time.perf_counter() - started
+                    # Bound fast exemplars and retain every trace linked by a selected exemplar.
+                    selected = status >= 500 or elapsed >= 0.3 or context.trace_id % 10 == 0
+                    exemplar = {"trace_id": trace_id} if selected else None
+                    if selected:
+                        span.set_attribute("prometheus.exemplar", True)
                     COUNTER.labels(SERVICE, TENANT, "error" if status >= 500 else "ok").inc(
-                        exemplar={"trace_id": trace_id}
+                        exemplar=exemplar
                     )
                     LATENCY.labels(SERVICE, TENANT).observe(
-                        time.perf_counter() - started, exemplar={"trace_id": trace_id}
+                        elapsed, exemplar=exemplar
                     )
                 LOGGER.info(
                     json.dumps(
