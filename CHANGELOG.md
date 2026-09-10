@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format foll
 
 - Select bounded fast-request exemplars, retain error/slow exemplars, and mark their OpenTelemetry spans for the platform tail-sampling policy. Verify exact trace identifiers and retention markers in request tests.
 
+### Added
+
+- 2026-09-11: Add a four-page English engineering portfolio PDF, an editable Markdown case study, and a reproducible ReportLab builder with an actual workspace screenshot and clickable project links.
+- Document the hosted feature set, optional deployment capabilities, recorded release verification, and the limits of synthetic evaluation in the portfolio; link both formats from the README.
+- Mark PDF assets as binary in Git to preserve their bytes across Windows and Linux checkouts.
+
 ## [2.2.0] - 2026-09-07
 
 ### Added

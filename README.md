@@ -4,6 +4,8 @@ A cited, evaluated, read-only assistant for production incident investigation. T
 
 [Try the live demo](https://llm-incident-assistant.onrender.com/) · [OpenAPI](https://llm-incident-assistant.onrender.com/docs) · [Latest release](https://github.com/QihuiPan/llm-production-incident-assistant/releases/latest)
 
+[View the project portfolio](docs/portfolio.md) · [Download the four-page PDF](output/pdf/QihuiPan_Incident_Assistant_Portfolio.pdf)
+
 > Safety boundary: this assistant cannot restart services, deploy code, modify records, or execute arbitrary commands. Every tool is read-only, server-allowlisted, strictly validated, budgeted, audited, and separately approved by a human.
 
 ## What reviewers can verify
